@@ -1,0 +1,6 @@
+{
+  "code": "23514",
+  "details": "Failing row contains (00000000-0000-0000-0000-111111111111, Teste, null, Marca, CategoriaInvalida, url, name, 10, 00000000-0000-0000-0000-000000000000, 1, t, 0, 2026-02-21 18:09:38.794011+00).",
+  "hint": null,
+  "message": "new row for relation \"documents\" violates check constraint \"documents_category_check\""
+}
