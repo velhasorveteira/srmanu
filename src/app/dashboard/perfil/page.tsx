@@ -83,7 +83,7 @@ export default function PerfilPage() {
                             <Bot className="w-6 h-6 mr-2" /> Área do Desenvolvedor (Admin)
                         </CardTitle>
                         <CardDescription className="text-gray-400">
-                            Ações exclusivas para manutenção da plataforma Sr Manu.
+                            Ações exclusivas para manutenção da plataforma Sr.Manu.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

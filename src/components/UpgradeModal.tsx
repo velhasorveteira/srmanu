@@ -49,7 +49,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 <DialogHeader>
                     <DialogTitle className="flex items-center text-xl text-indigo-400">
                         <Rocket className="w-6 h-6 mr-2" />
-                        Desbloqueie o Sr Manu Pro
+                        Desbloqueie o Sr.Manu Pro
                     </DialogTitle>
                     <DialogDescription className="text-gray-400 pt-2">
                         Você atingiu o limite de 3 uploads no plano Free. Faça o upgrade agora e obtenha acesso ilimitado para armazenar e compartilhar seus documentos técnicos!

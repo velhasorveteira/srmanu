@@ -16,7 +16,7 @@ export default function Home() {
           transition={{ duration: 0.6 }}
           className="flex items-center space-x-3 z-10"
         >
-          <Image src="/logo.png" alt="Sr Manu Logo" width={60} height={40} className="object-contain" unoptimized priority />
+          <Image src="/logo.png" alt="Sr.Manu Logo" width={60} height={40} className="object-contain" unoptimized priority />
         </motion.div>
         <motion.nav
           initial={{ opacity: 0, y: -10 }}
@@ -278,9 +278,9 @@ export default function Home() {
       <footer className="border-t border-gray-900 py-12 text-center text-gray-500 text-sm mt-12 bg-gray-950">
         <div className="flex justify-center items-center space-x-2 mb-4">
           <Image src="/logo.png" alt="Logo Footer" width={40} height={25} className="object-contain opacity-70" unoptimized />
-          <span className="font-semibold text-gray-400">Sr Manu</span>
+          <span className="font-semibold text-gray-400">Sr.Manu</span>
         </div>
-        <p>© 2026 Sr Manu. Todos os direitos reservados. Feito com rigor técnico.</p>
+        <p>© 2026 Sr.Manu. Todos os direitos reservados. Feito com rigor técnico.</p>
       </footer>
     </div>
   );

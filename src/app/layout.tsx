@@ -15,7 +15,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Sr Manu",
+  title: "Sr.Manu",
   description: "Plataforma de gerenciamento e compartilhamento de documentos técnicos",
 };
 

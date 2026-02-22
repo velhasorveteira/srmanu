@@ -26,7 +26,7 @@ export function PdfViewerModal({ url, onClose }: PdfViewerModalProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8">
             <div className="bg-gray-900 border border-gray-700 rounded-xl w-full h-full max-w-7xl flex flex-col overflow-hidden shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-800">
-                    <h2 className="text-lg font-semibold text-white">Visualizador Sr Manu</h2>
+                    <h2 className="text-lg font-semibold text-white">Visualizador Sr.Manu</h2>
                     <button
                         onClick={onClose}
                         className="p-2 text-gray-400 hover:text-white hover:bg-red-500/80 rounded-full transition-colors group"

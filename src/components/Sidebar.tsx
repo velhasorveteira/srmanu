@@ -31,7 +31,7 @@ export function Sidebar() {
                     </Button>
                     <div className="flex items-center gap-2">
                         <Image src="/logo.png" alt="Sr Manu" width={40} height={25} className="object-contain drop-shadow-md" unoptimized priority />
-                        <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent">Sr Manu</h1>
+                        <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent">Sr.Manu</h1>
                     </div>
                 </div>
             </div>
@@ -66,7 +66,7 @@ export function Sidebar() {
                     {!isCollapsed && (
                         <div className="flex items-center gap-2">
                             <Image src="/logo.png" alt="Sr Manu" width={40} height={25} className="object-contain drop-shadow-md" unoptimized priority />
-                            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent">Sr Manu</h1>
+                            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-indigo-200 bg-clip-text text-transparent">Sr.Manu</h1>
                         </div>
                     )}
                     {isCollapsed && (

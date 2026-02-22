@@ -59,8 +59,8 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4">
             <Link href="/" className="flex items-center space-x-2 mb-8">
-                <Image src="/logo.png" alt="Sr Manu Logo" width={48} height={48} className="object-contain" />
-                <span className="text-3xl font-bold text-white tracking-tight">Sr Manu</span>
+                <Image src="/logo.png" alt="Sr.Manu Logo" width={48} height={48} className="object-contain" />
+                <span className="text-3xl font-bold text-white tracking-tight">Sr.Manu</span>
             </Link>
 
             <div className="w-full max-w-md bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl p-8">
