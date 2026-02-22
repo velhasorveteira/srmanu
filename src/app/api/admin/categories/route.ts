@@ -1,0 +1,111 @@
+import { NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
+
+// POST: Criar uma Nova Pasta (Documento Fantasma)
+export async function POST(request: Request) {
+    try {
+        const body = await request.json();
+        const { categoryName, userEmail } = body;
+
+        if (userEmail !== 'velhasorveteira@gmail.com') {
+            return NextResponse.json({ error: 'Acesso Negado.' }, { status: 403 });
+        }
+
+        // Cria o registro fantasma na tabela documents
+        const { error } = await supabaseAdmin
+            .from('documents')
+            .insert({
+                title: '__DIR__',
+                category: categoryName,
+                description: `Cat:${categoryName}|`,
+                file_url: '#', // Sem arquivo real
+                file_size_bytes: 0,
+                uploader_name: 'System Admin'
+            });
+
+        if (error) throw error;
+        return NextResponse.json({ success: true, message: 'Pasta criada com sucesso.' });
+
+    } catch (error) {
+        console.error('API Admin/Categories (POST) Error:', error);
+        return NextResponse.json({ error: 'Erro interno.' }, { status: 500 });
+    }
+}
+
+// PATCH: Renomear uma Pasta (Bulk Update)
+export async function PATCH(request: Request) {
+    try {
+        const body = await request.json();
+        const { oldCategory, newCategory, userEmail } = body;
+
+        if (userEmail !== 'velhasorveteira@gmail.com') {
+            return NextResponse.json({ error: 'Acesso Negado.' }, { status: 403 });
+        }
+
+
+        // 1. Precisamos atualizar a coluna category
+        // 2. Precisamos atualizar o trecho "Cat:oldCategory|" no description
+
+        // Supabase REST API não suporta replace de string nativo elegante em bulk update simples.
+        // A melhor forma é buscar todos os IDs afetados e atualizá-los.
+
+        const { data: docsToUpdate, error: fetchError } = await supabaseAdmin
+            .from('documents')
+            .select('id, description')
+            .eq('category', oldCategory);
+
+        if (fetchError || !docsToUpdate) throw fetchError;
+
+        // Executa as atualizações individualmente (geralmente rápido suficiente se < 100 docs, para mais precisa RPC function)
+        const updatePromises = docsToUpdate.map(async (doc) => {
+            const extrairMarcaRegex = /Cat:[^|]+\|([^]+)/;
+            const extractedBrand = doc.description?.match(extrairMarcaRegex)?.[1]?.trim() || '';
+            const newDescription = `Cat:${newCategory}|${extractedBrand}`;
+
+            return supabaseAdmin
+                .from('documents')
+                .update({
+                    category: newCategory,
+                    description: newDescription
+                })
+                .eq('id', doc.id);
+        });
+
+        await Promise.all(updatePromises);
+
+        return NextResponse.json({ success: true, message: `${docsToUpdate.length} documentos movidos para a nova pasta.` });
+
+    } catch (error) {
+        console.error('API Admin/Categories (PATCH) Error:', error);
+        return NextResponse.json({ error: 'Erro interno.' }, { status: 500 });
+    }
+}
+
+// DELETE: Apagar Categoria Inteira (Bulk Delete)
+export async function DELETE(request: Request) {
+    try {
+        const url = new URL(request.url);
+        const categoryName = url.searchParams.get('category');
+        const userEmail = url.searchParams.get('email');
+
+        if (userEmail !== 'velhasorveteira@gmail.com') {
+            return NextResponse.json({ error: 'Acesso Negado.' }, { status: 403 });
+        }
+        if (!categoryName) {
+            return NextResponse.json({ error: 'Nome da Categoria é Requirido.' }, { status: 400 });
+        }
+
+        const { error: deleteError } = await supabaseAdmin
+            .from('documents')
+            .delete()
+            .eq('category', categoryName);
+
+        if (deleteError) throw deleteError;
+
+        return NextResponse.json({ success: true, message: 'Pasta e todo o seu conteúdo deletados com sucesso.' });
+
+    } catch (error) {
+        console.error('API Admin/Categories (DELETE) Error:', error);
+        return NextResponse.json({ error: 'Erro interno.' }, { status: 500 });
+    }
+}
