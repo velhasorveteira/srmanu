@@ -10,6 +10,7 @@ import { PdfViewerModal } from "@/components/PdfViewerModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 export default function DocumentosPage() {
     const { dbUser } = useAuth();
@@ -23,6 +24,12 @@ export default function DocumentosPage() {
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [activeTab, setActiveTab] = useState<"explore" | "favorites">("explore");
     const [favoriteIds, setFavoriteIds] = useState<Record<string, boolean>>({});
+
+    // Admin states
+    const isAdmin = dbUser?.email === 'velhasorveteira@gmail.com';
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editingDoc, setEditingDoc] = useState<{ id: string, title: string, category: string, brand: string } | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (dbUser?.id) {
@@ -124,6 +131,79 @@ export default function DocumentosPage() {
             console.error(e);
         }
         window.open(url, "_blank");
+    };
+
+    const handleEditClick = (id: string, currentData: { title: string, category: string, description?: string, brand?: string }) => {
+        setEditingDoc({
+            id,
+            title: currentData.title,
+            category: currentData.category,
+            brand: currentData.brand || ""
+        });
+        setEditModalOpen(true);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingDoc || !isAdmin) return;
+        setIsSaving(true);
+        try {
+            const res = await fetch(`/api/admin/documents/${editingDoc.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: editingDoc.title,
+                    brand: editingDoc.brand,
+                    category: editingDoc.category,
+                    userEmail: dbUser.email
+                })
+            });
+
+            if (res.ok) {
+                // Atualizar o estado local
+                setDocuments(docs => docs.map(d => {
+                    if (d.id === editingDoc.id) {
+                        return {
+                            ...d,
+                            title: editingDoc.title,
+                            brand: editingDoc.brand,
+                            category: editingDoc.category,
+                            realCategory: editingDoc.category,
+                            description: `Cat:${editingDoc.category}|${editingDoc.brand}`
+                        };
+                    }
+                    return d;
+                }));
+                setEditModalOpen(false);
+            } else {
+                alert('Erro ao salvar as edições do documento.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro inesperado.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDeleteAsAdmin = async (id: string) => {
+        if (!isAdmin) return;
+        if (!confirm("⚠️ ATENÇÃO ADMINISTRADOR! ⚠️\n\nIsso apagará este arquivo definitivamente do banco de dados e do Storage para todos os usuários. Deseja continuar?")) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/admin/documents/${id}?email=${dbUser.email}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                setDocuments(docs => docs.filter(d => d.id !== id));
+            } else {
+                alert("Falha ao excluir permanentemente.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Erro inesperado ao excluir.");
+        }
     };
 
     const isSearching = searchTerm.trim() !== "";
@@ -244,6 +324,9 @@ export default function DocumentosPage() {
                                     onDownload={handleDownload}
                                     onToggleFavorite={handleToggleFavorite}
                                     onView={handleViewPdf}
+                                    isAdmin={isAdmin}
+                                    onEdit={handleEditClick}
+                                    onDelete={isAdmin ? handleDeleteAsAdmin : undefined}
                                 />
                             ))}
                         </div>
@@ -321,6 +404,9 @@ export default function DocumentosPage() {
                                 onDownload={handleDownload}
                                 onToggleFavorite={handleToggleFavorite}
                                 onView={handleViewPdf}
+                                isAdmin={isAdmin}
+                                onEdit={handleEditClick}
+                                onDelete={isAdmin ? handleDeleteAsAdmin : undefined}
                             />
                         ))}
                     </div>
@@ -333,6 +419,52 @@ export default function DocumentosPage() {
 
             <PdfViewerModal url={viewingPdfUrl} onClose={() => setViewingPdfUrl(null)} />
             <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
+
+            {/* Admin Edit Modal */}
+            <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+                <DialogContent className="bg-gray-900 text-white border-gray-800">
+                    <DialogHeader>
+                        <DialogTitle>Editar Informações do Documento</DialogTitle>
+                        <DialogDescription className="text-gray-400">
+                            Modo Administrador. Modifique a classificação estrutural deste arquivo.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {editingDoc && (
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium leading-none text-white">Título do Documento</label>
+                                <Input
+                                    value={editingDoc.title}
+                                    onChange={(e) => setEditingDoc({ ...editingDoc, title: e.target.value })}
+                                    className="bg-gray-800 border-gray-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium leading-none text-white">Marca / Fabricante</label>
+                                <Input
+                                    value={editingDoc.brand}
+                                    onChange={(e) => setEditingDoc({ ...editingDoc, brand: e.target.value })}
+                                    className="bg-gray-800 border-gray-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium leading-none text-white">Categoria (Pasta)</label>
+                                <Input
+                                    value={editingDoc.category}
+                                    onChange={(e) => setEditingDoc({ ...editingDoc, category: e.target.value })}
+                                    className="bg-gray-800 border-gray-700"
+                                />
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setEditModalOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleSaveEdit} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
+                            {isSaving ? "Salvando..." : "Salvar Alterações"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { Download, File, Trash2, ExternalLink, Star } from "lucide-react";
+import { Download, File, Trash2, ExternalLink, Star, Pencil } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,13 +28,19 @@ interface DocumentCardProps {
     onDownload?: (id: string, url: string) => void;
     onToggleFavorite?: (id: string) => void;
     onView?: (url: string) => void;
+    isAdmin?: boolean;
+    onEdit?: (id: string, currentData: { title: string, category: string, description?: string, brand?: string }) => void;
 }
 
 export function DocumentCard({
     id, title, description, category, file_url, file_size_bytes,
     uploader_name, is_pro_uploader, download_count, created_at,
-    isOwner, isFavorite, hideDownload, onDelete, onDownload, onToggleFavorite, onView
+    isOwner, isFavorite, hideDownload, onDelete, onDownload, onToggleFavorite, onView, isAdmin, onEdit
 }: DocumentCardProps) {
+
+    // Extracao segura da marca pra edição, caso exista no description (Cat:Categoria|Marca)
+    const extrairMarcaRegex = /Cat:[^|]+\|([^]+)/;
+    const extractedBrand = description?.match(extrairMarcaRegex)?.[1]?.trim() || '';
 
     const categoryMap = {
         document: { label: "Documento", color: "bg-blue-500" },
@@ -77,14 +83,21 @@ export function DocumentCard({
 
             <CardHeader className="pb-3 pt-4">
                 <div className="flex justify-between items-start">
-                    <Badge className={`${categoryMap[category].color} text-white hover:${categoryMap[category].color}`}>
-                        {categoryMap[category].label}
+                    <Badge className={`${categoryMap[category]?.color || "bg-gray-500"} text-white hover:${categoryMap[category]?.color || "bg-gray-500"}`}>
+                        {categoryMap[category]?.label || "Arquivo"}
                     </Badge>
-                    {isOwner && onDelete && (
-                        <Button variant="ghost" size="icon" onClick={() => onDelete(id)} className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-gray-800">
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                    )}
+                    <div className="flex gap-1">
+                        {isAdmin && onEdit && (
+                            <Button variant="ghost" size="icon" onClick={() => onEdit(id, { title, category, description, brand: extractedBrand })} className="h-8 w-8 text-gray-400 hover:text-indigo-400 hover:bg-gray-800">
+                                <Pencil className="h-4 w-4" />
+                            </Button>
+                        )}
+                        {(isOwner || isAdmin) && onDelete && (
+                            <Button variant="ghost" size="icon" onClick={() => onDelete(id)} className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-gray-800">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
                 </div>
                 <CardTitle className="mt-2 text-xl line-clamp-2" title={title}>{title}</CardTitle>
             </CardHeader>
