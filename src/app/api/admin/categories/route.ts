@@ -17,6 +17,7 @@ export async function POST(request: Request) {
             .insert({
                 title: '__DIR__',
                 category: categoryName,
+                brand: 'Genérica',
                 description: `Cat:${categoryName}|`,
                 file_url: '#', // Sem arquivo real
                 file_size_bytes: 0,
