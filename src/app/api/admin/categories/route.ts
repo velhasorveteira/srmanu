@@ -49,10 +49,11 @@ export async function PATCH(request: Request) {
         // Supabase REST API não suporta replace de string nativo elegante em bulk update simples.
         // A melhor forma é buscar todos os IDs afetados e atualizá-los.
 
+        // 1. Precisamos buscar documentos onde a descrição comece com Cat:oldCategory|
         const { data: docsToUpdate, error: fetchError } = await supabaseAdmin
             .from('documents')
-            .select('id, description')
-            .eq('category', oldCategory);
+            .select('id, category, description')
+            .like('description', `Cat:${oldCategory}|%`);
 
         if (fetchError || !docsToUpdate) throw fetchError;
 
@@ -62,10 +63,13 @@ export async function PATCH(request: Request) {
             const extractedBrand = doc.description?.match(extrairMarcaRegex)?.[1]?.trim() || '';
             const newDescription = `Cat:${newCategory}|${extractedBrand}`;
 
+            // Se a coluna category for literalmente o nome antigo, era uma página fantasma. Se não, mantemos inalterada (ex: 'document', 'manual').
+            const finalCategoryCol = doc.category === oldCategory ? newCategory : doc.category;
+
             const { error: updateError } = await supabaseAdmin
                 .from('documents')
                 .update({
-                    category: newCategory,
+                    category: finalCategoryCol,
                     description: newDescription
                 })
                 .eq('id', doc.id);
@@ -97,10 +101,11 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'Nome da Categoria é Requirido.' }, { status: 400 });
         }
 
+        // Removemos buscando o delimitador Cat:category| exatamente, para não apagar categorias com nomes parecidos
         const { error: deleteError } = await supabaseAdmin
             .from('documents')
             .delete()
-            .eq('category', categoryName);
+            .like('description', `Cat:${categoryName}|%`);
 
         if (deleteError) throw deleteError;
 
