@@ -56,19 +56,21 @@ export async function PATCH(request: Request) {
 
         if (fetchError || !docsToUpdate) throw fetchError;
 
-        // Executa as atualizações individualmente (geralmente rápido suficiente se < 100 docs, para mais precisa RPC function)
+        // Executa as atualizações individualmente e checa erros de cada operação
         const updatePromises = docsToUpdate.map(async (doc) => {
             const extrairMarcaRegex = /Cat:[^|]+\|([^]+)/;
             const extractedBrand = doc.description?.match(extrairMarcaRegex)?.[1]?.trim() || '';
             const newDescription = `Cat:${newCategory}|${extractedBrand}`;
 
-            return supabaseAdmin
+            const { error: updateError } = await supabaseAdmin
                 .from('documents')
                 .update({
                     category: newCategory,
                     description: newDescription
                 })
                 .eq('id', doc.id);
+
+            if (updateError) throw updateError;
         });
 
         await Promise.all(updatePromises);
