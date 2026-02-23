@@ -20,6 +20,8 @@ export async function POST(request: Request) {
                 brand: 'Genérica',
                 description: `Cat:${categoryName}|`,
                 file_url: '#', // Sem arquivo real
+                file_name: '__DIR__fantasma',
+                file_type: 'folder',
                 file_size_bytes: 0,
                 uploader_name: 'System Admin'
             });
