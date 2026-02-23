@@ -16,12 +16,11 @@ export async function POST(request: Request) {
             .from('documents')
             .insert({
                 title: '__DIR__',
-                category: categoryName,
+                category: 'document', // Campo nativo de type (não aceita nomes customizados pela restrição do BD)
                 brand: 'Genérica',
                 description: `Cat:${categoryName}|`,
                 file_url: '#', // Sem arquivo real
                 file_name: '__DIR__fantasma',
-                file_type: 'folder',
                 file_size_bytes: 0,
                 uploader_name: 'System Admin'
             });
