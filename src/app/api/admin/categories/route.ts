@@ -49,11 +49,11 @@ export async function PATCH(request: Request) {
         // Supabase REST API não suporta replace de string nativo elegante em bulk update simples.
         // A melhor forma é buscar todos os IDs afetados e atualizá-los.
 
-        // 1. Precisamos buscar documentos onde a descrição comece com Cat:oldCategory|
+        // 1. Precisamos buscar documentos onde a descrição comece com Cat:oldCategory| ou com espaço Cat:oldCategory |
         const { data: docsToUpdate, error: fetchError } = await supabaseAdmin
             .from('documents')
             .select('id, category, description')
-            .like('description', `Cat:${oldCategory}|%`);
+            .or(`description.like.Cat:${oldCategory}|%,description.like.Cat:${oldCategory} |%`);
 
         if (fetchError || !docsToUpdate) throw fetchError;
 
@@ -101,11 +101,11 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'Nome da Categoria é Requirido.' }, { status: 400 });
         }
 
-        // Removemos buscando o delimitador Cat:category| exatamente, para não apagar categorias com nomes parecidos
+        // Removemos buscando o delimitador Cat:category| exatamente ou com o espaço acidental gerado pelo app
         const { error: deleteError } = await supabaseAdmin
             .from('documents')
             .delete()
-            .like('description', `Cat:${categoryName}|%`);
+            .or(`description.like.Cat:${categoryName}|%,description.like.Cat:${categoryName} |%`);
 
         if (deleteError) throw deleteError;
 
