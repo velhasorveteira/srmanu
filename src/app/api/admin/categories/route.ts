@@ -50,10 +50,11 @@ export async function PATCH(request: Request) {
         // A melhor forma é buscar todos os IDs afetados e atualizá-los.
 
         // 1. Precisamos buscar documentos onde a descrição comece com Cat:oldCategory| ou com espaço Cat:oldCategory |
+        // IMPORTANTE: Valores dentro da cláusula `or` precisam ser envolvidos por aspas duplas se contiverem parênteses/vírgulas
         const { data: docsToUpdate, error: fetchError } = await supabaseAdmin
             .from('documents')
             .select('id, category, description')
-            .or(`description.like.Cat:${oldCategory}|%,description.like.Cat:${oldCategory} |%`);
+            .or(`description.like."Cat:${oldCategory}|%",description.like."Cat:${oldCategory} |%"`);
 
         if (fetchError || !docsToUpdate) throw fetchError;
 
@@ -101,11 +102,11 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'Nome da Categoria é Requirido.' }, { status: 400 });
         }
 
-        // Removemos buscando o delimitador Cat:category| exatamente ou com o espaço acidental gerado pelo app
+        // Removemos buscando o delimitador exato, protegendo com aspas duplas contra quebra do PostgREST
         const { error: deleteError } = await supabaseAdmin
             .from('documents')
             .delete()
-            .or(`description.like.Cat:${categoryName}|%,description.like.Cat:${categoryName} |%`);
+            .or(`description.like."Cat:${categoryName}|%",description.like."Cat:${categoryName} |%"`);
 
         if (deleteError) throw deleteError;
 
