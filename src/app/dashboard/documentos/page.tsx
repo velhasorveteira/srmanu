@@ -37,6 +37,12 @@ export default function DocumentosPage() {
     const [newCategoryName, setNewCategoryName] = useState("");
     const [isSavingCategory, setIsSavingCategory] = useState(false);
 
+    const [brandModalOpen, setBrandModalOpen] = useState(false);
+    const [brandModalMode, setBrandModalMode] = useState<"create" | "edit">("create");
+    const [currentBrandName, setCurrentBrandName] = useState("");
+    const [newBrandName, setNewBrandName] = useState("");
+    const [isSavingBrand, setIsSavingBrand] = useState(false);
+
     useEffect(() => {
         if (dbUser?.id) {
             fetchDocuments();
@@ -309,6 +315,98 @@ export default function DocumentosPage() {
         }
     };
 
+    // Action Handlers for Brands
+    const handleCreateBrandClick = () => {
+        setBrandModalMode("create");
+        setNewBrandName("");
+        setBrandModalOpen(true);
+    };
+
+    const handleEditBrandClick = (e: React.MouseEvent, brName: string) => {
+        e.stopPropagation();
+        setBrandModalMode("edit");
+        setCurrentBrandName(brName);
+        setNewBrandName(brName);
+        setBrandModalOpen(true);
+    };
+
+    const handleBrandSave = async () => {
+        if (!newBrandName.trim() || !isAdmin || !selectedCategory) return;
+        setIsSavingBrand(true);
+
+        try {
+            if (brandModalMode === "create") {
+                const res = await fetch(`/api/admin/brands`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ categoryName: selectedCategory, brandName: newBrandName.trim(), userEmail: dbUser.email })
+                });
+                if (res.ok) {
+                    fetchDocuments();
+                    setBrandModalOpen(false);
+                } else {
+                    alert('Falha ao criar marca.');
+                }
+            } else {
+                if (newBrandName.trim() === currentBrandName) {
+                    setBrandModalOpen(false);
+                    return setIsSavingBrand(false);
+                }
+                const res = await fetch(`/api/admin/brands`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ categoryName: selectedCategory, oldBrand: currentBrandName, newBrand: newBrandName.trim(), userEmail: dbUser.email })
+                });
+                if (res.ok) {
+                    setDocuments(docs => docs.map(d => {
+                        if (d.realCategory === selectedCategory && d.brand === currentBrandName) {
+                            return {
+                                ...d,
+                                brand: newBrandName.trim(),
+                                description: `Cat:${selectedCategory}|${newBrandName.trim()}`
+                            };
+                        }
+                        return d;
+                    }));
+                    if (selectedBrand === currentBrandName) setSelectedBrand(newBrandName.trim());
+                    setBrandModalOpen(false);
+                } else {
+                    alert("Falha ao renomear a marca em massa.");
+                }
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Erro inesperado gerindo marcas.");
+        } finally {
+            setIsSavingBrand(false);
+        }
+    };
+
+    const handleDeleteBrand = async (e: React.MouseEvent, brName: string) => {
+        e.stopPropagation();
+        if (!isAdmin || !selectedCategory) return;
+
+        const count = documents.filter(d => d.realCategory === selectedCategory && d.brand === brName && d.title !== '__DIR__').length;
+        if (!confirm(`⚠️ CUIDADO! ⚠️\n\nVocê está prestes a DELETAR COMPLETAMENTE a marca "${brName}" e TODOS os ${count} documentos dentro dela na categoria "${selectedCategory}".\n\nIsso não pode ser desfeito. Tem certeza absoluta?`)) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/admin/brands?category=${encodeURIComponent(selectedCategory)}&brand=${encodeURIComponent(brName)}&email=${dbUser.email}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                setDocuments(docs => docs.filter(d => !(d.realCategory === selectedCategory && d.brand === brName)));
+                if (selectedBrand === brName) setSelectedBrand(null);
+            } else {
+                alert("Falha ao excluir marca inteira.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Erro inesperado ao deletar marca.");
+        }
+    };
+
     const filteredDocs = documents.filter(doc => {
         if (doc.title === '__DIR__') return false; // SEMPRE Oculta arquivos fantasmas da visualizacao
 
@@ -480,14 +578,31 @@ export default function DocumentosPage() {
                 </div>
             ) : (!selectedBrand && activeTab === "explore") ? (
                 <div className="space-y-4">
-                    <h2 className="text-xl font-semibold text-white">Marcas de {selectedCategory}</h2>
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-semibold text-white">Marcas de {selectedCategory}</h2>
+                        {isAdmin && (
+                            <Button onClick={handleCreateBrandClick} size="sm" className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg">
+                                <Plus className="w-4 h-4 mr-2" /> Nova Marca
+                            </Button>
+                        )}
+                    </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         {brandsInCategory.length > 0 ? brandsInCategory.map((brand: any) => (
                             <div
                                 key={brand}
                                 onClick={() => setSelectedBrand(brand)}
-                                className="bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-indigo-500/50 p-6 rounded-xl cursor-pointer text-center transition-all group flex flex-col items-center justify-center min-h-[120px] shadow-sm hover:shadow-indigo-900/20"
+                                className="bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-indigo-500/50 p-6 rounded-xl cursor-pointer text-center transition-all group flex flex-col items-center justify-center min-h-[120px] shadow-sm hover:shadow-indigo-900/20 relative"
                             >
+                                {isAdmin && (
+                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={(e) => handleEditBrandClick(e, brand)} className="p-1.5 bg-gray-900 text-gray-400 hover:text-indigo-400 rounded-md" title="Renomear Marca em Massa">
+                                            <Edit2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button onClick={(e) => handleDeleteBrand(e, brand)} className="p-1.5 bg-gray-900 text-gray-400 hover:text-red-500 rounded-md" title="Apagar Marca e todo Conteúdo">
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                )}
                                 <h3 className="font-semibold text-white group-hover:text-indigo-400 text-lg break-words">{brand}</h3>
                                 <p className="text-xs text-gray-400 mt-2">
                                     {documents.filter(d => d.realCategory === selectedCategory && d.brand === brand && d.title !== '__DIR__').length} arquivos
@@ -613,6 +728,38 @@ export default function DocumentosPage() {
                         <Button variant="ghost" onClick={() => setCategoryModalOpen(false)}>Cancelar</Button>
                         <Button onClick={handleCategorySave} disabled={isSavingCategory || !newCategoryName.trim()} className="bg-indigo-600 hover:bg-indigo-700">
                             {isSavingCategory ? "Aplicando..." : (categoryModalMode === 'create' ? "Criar Pasta" : "Renomear Tudo")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Brand Create / Edit Modal */}
+            <Dialog open={brandModalOpen} onOpenChange={setBrandModalOpen}>
+                <DialogContent className="bg-gray-900 text-white border-gray-800">
+                    <DialogHeader>
+                        <DialogTitle>{brandModalMode === 'create' ? 'Criar Nova Marca (Sub-Categoria)' : 'Renomear Marca em Massa'}</DialogTitle>
+                        <DialogDescription className="text-gray-400">
+                            {brandModalMode === 'create'
+                                ? `Criará uma marca vazia pronta para receber documentos dentro da categoria "${selectedCategory}".`
+                                : `Modo Administrador. Renomear essa marca atualizará simultaneamente ${documents.filter(d => d.realCategory === selectedCategory && d.brand === currentBrandName && d.title !== '__DIR__').length} arquivos do banco de dados.`}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium leading-none text-white">Nome da Marca</label>
+                            <Input
+                                value={newBrandName}
+                                onChange={(e) => setNewBrandName(e.target.value)}
+                                placeholder="Ex: Carrier / Midea"
+                                className="bg-gray-800 border-gray-700 font-semibold"
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setBrandModalOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleBrandSave} disabled={isSavingBrand || !newBrandName.trim()} className="bg-indigo-600 hover:bg-indigo-700">
+                            {isSavingBrand ? "Aplicando..." : (brandModalMode === 'create' ? "Criar Marca" : "Renomear Tudo")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
