@@ -532,7 +532,7 @@ export default function DocumentosPage() {
                                     download_count={doc.download_count}
                                     created_at={doc.created_at}
                                     isFavorite={favoriteIds[doc.id]}
-                                    hideDownload={true}
+                                    hideDownload={!isAdmin}
                                     onDownload={handleDownload}
                                     onToggleFavorite={handleToggleFavorite}
                                     onView={handleViewPdf}
@@ -646,7 +646,7 @@ export default function DocumentosPage() {
                                 download_count={doc.download_count}
                                 created_at={doc.created_at}
                                 isFavorite={favoriteIds[doc.id]}
-                                hideDownload={true}
+                                hideDownload={!isAdmin}
                                 onDownload={handleDownload}
                                 onToggleFavorite={handleToggleFavorite}
                                 onView={handleViewPdf}
