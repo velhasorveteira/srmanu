@@ -21,7 +21,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
             .update({
                 title: title,
                 brand: brand,
-                category: category,
+                // Não atualizamos a coluna 'category' porque ela tem um check constraint ('document', 'catalog', 'manual').
+                // A categoria real é salva no campo 'description'.
                 description: newDescription
             })
             .eq('id', id);
