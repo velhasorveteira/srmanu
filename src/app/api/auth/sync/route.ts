@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-// Podemos adicionar validação de token do Firebase Admin SDK, mas para simplificar inicializações,
-// confiaremos no payload fornecido pela requisição.
-// O ideal em produção é usar `firebase-admin` para verificar o token:
-// const decodedToken = await admin.auth().verifyIdToken(token);
+import { stripe } from '@/lib/stripe';
 
 export async function POST(req: Request) {
     try {
@@ -32,8 +29,17 @@ export async function POST(req: Request) {
 
         let dbUser = user;
 
-        // Se o usuário não existir, vamos criar
+        // Se o usuário não existir ou se não tiver um stripe_customer_id, vamos processar
         if (!user) {
+            // Criar cliente no Stripe
+            const customer = await stripe.customers.create({
+                email,
+                name: name || undefined,
+                metadata: {
+                    firebase_uid: uid,
+                },
+            });
+
             const { data: newUser, error: insertError } = await supabaseAdmin
                 .from('users')
                 .insert([
@@ -42,6 +48,7 @@ export async function POST(req: Request) {
                         email,
                         name,
                         avatar_url,
+                        stripe_customer_id: customer.id,
                     }
                 ])
                 .select()
@@ -53,6 +60,28 @@ export async function POST(req: Request) {
             }
 
             dbUser = newUser;
+        } else if (!user.stripe_customer_id) {
+            // Caso o usuário exista mas por algum motivo não tenha o ID do Stripe
+            const customer = await stripe.customers.create({
+                email,
+                name: name || user.name || undefined,
+                metadata: {
+                    firebase_uid: uid,
+                },
+            });
+
+            const { data: updatedUser, error: updateError } = await supabaseAdmin
+                .from('users')
+                .update({ stripe_customer_id: customer.id })
+                .eq('id', uid)
+                .select()
+                .single();
+
+            if (updateError) {
+                console.error("Erro ao atualizar stripe_customer_id:", updateError);
+            } else {
+                dbUser = updatedUser;
+            }
         }
 
         return NextResponse.json({ user: dbUser }, { status: 200 });

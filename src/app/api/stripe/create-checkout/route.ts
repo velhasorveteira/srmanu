@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2023-10-16' as any, // Use fallback seguro para sync
-});
+import { stripe } from '@/lib/stripe';
 
 export async function POST(req: Request) {
     try {
@@ -29,11 +25,21 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'User ID is missing' }, { status: 400 });
         }
 
+        // Buscar stripe_customer_id no banco de dados
+        const { data: user } = await supabaseAdmin
+            .from('users')
+            .select('stripe_customer_id')
+            .eq('id', uid)
+            .single();
+
+        const customerId = user?.stripe_customer_id;
+
         // Criar Stripe Checkout Session
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             mode: 'subscription', // Assinatura recorrente ou 'payment'
-            customer_email: email,
+            customer: customerId || undefined,
+            customer_email: customerId ? undefined : email,
             line_items: [
                 {
                     price: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
