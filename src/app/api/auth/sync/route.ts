@@ -10,6 +10,7 @@ export async function POST(req: Request) {
         }
 
         const { uid, email, name, avatar_url } = await req.json();
+        console.log(`[SYNC] Iniciando sincronização para: ${email} (${uid})`);
 
         if (!uid || !email) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
             .single();
 
         if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = missing row
-            console.error("Erro ao buscar usuário no Supabase:", selectError);
+            console.error("[SYNC] Erro ao buscar usuário no Supabase:", selectError);
             return NextResponse.json({ error: selectError.message }, { status: 500 });
         }
 
@@ -31,6 +32,7 @@ export async function POST(req: Request) {
 
         // Se o usuário não existir ou se não tiver um stripe_customer_id, vamos processar
         if (!user) {
+            console.log(`[SYNC] Usuário novo detectado. Criando cliente no Stripe...`);
             // Criar cliente no Stripe
             const customer = await stripe.customers.create({
                 email,
@@ -39,6 +41,7 @@ export async function POST(req: Request) {
                     firebase_uid: uid,
                 },
             });
+            console.log(`[SYNC] Cliente Stripe criado: ${customer.id}`);
 
             const { data: newUser, error: insertError } = await supabaseAdmin
                 .from('users')
@@ -55,12 +58,14 @@ export async function POST(req: Request) {
                 .single();
 
             if (insertError) {
-                console.error("Erro ao inserir usuário no Supabase FULL:", insertError);
+                console.error("[SYNC] Erro ao inserir usuário no Supabase:", insertError);
                 return NextResponse.json({ error: insertError.message, details: insertError }, { status: 500 });
             }
 
+            console.log(`[SYNC] Usuário inserido no Supabase com stripe_customer_id.`);
             dbUser = newUser;
         } else if (!user.stripe_customer_id) {
+            console.log(`[SYNC] Usuário existente sem stripe_customer_id. Criando cliente no Stripe...`);
             // Caso o usuário exista mas por algum motivo não tenha o ID do Stripe
             const customer = await stripe.customers.create({
                 email,
@@ -69,6 +74,7 @@ export async function POST(req: Request) {
                     firebase_uid: uid,
                 },
             });
+            console.log(`[SYNC] Cliente Stripe criado para usuário existente: ${customer.id}`);
 
             const { data: updatedUser, error: updateError } = await supabaseAdmin
                 .from('users')
@@ -78,16 +84,19 @@ export async function POST(req: Request) {
                 .single();
 
             if (updateError) {
-                console.error("Erro ao atualizar stripe_customer_id:", updateError);
+                console.error("[SYNC] Erro ao atualizar stripe_customer_id:", updateError);
             } else {
+                console.log(`[SYNC] Usuário atualizado no Supabase com stripe_customer_id.`);
                 dbUser = updatedUser;
             }
+        } else {
+            console.log(`[SYNC] Usuário já possui stripe_customer_id: ${user.stripe_customer_id}`);
         }
 
         return NextResponse.json({ user: dbUser }, { status: 200 });
 
     } catch (error: any) {
-        console.error("Auth sync error FULL TRACE:", error);
+        console.error("[SYNC] Auth sync error FULL TRACE:", error);
         return NextResponse.json({ error: error?.message || 'Erro desconhecido', stack: error?.stack }, { status: 500 });
     }
 }
