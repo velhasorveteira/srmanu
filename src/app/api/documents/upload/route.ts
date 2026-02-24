@@ -63,14 +63,19 @@ export async function POST(req: Request) {
 
         const { data: publicUrlData } = supabaseAdmin.storage.from('documents').getPublicUrl(filePath);
 
+        const documentType = (formData.get('documentType') as string) || 'document';
+        // A categoria real da estrutura de pastas é salva através da string mágica no 'description'
+        const baseDescription = description ? ` - ${description}` : '';
+        const newDescription = `Cat:${category}|${brand}${baseDescription}`;
+
         // 3. Save document record in Postgres
         const { data: docRecord, error: dbError } = await supabaseAdmin
             .from('documents')
             .insert([{
                 id: fileId,
                 title,
-                description,
-                category,
+                description: newDescription,
+                category: documentType, // Check constraint limits to: document, catalog, manual
                 brand,
                 file_url: publicUrlData.publicUrl,
                 file_name: file.name,
