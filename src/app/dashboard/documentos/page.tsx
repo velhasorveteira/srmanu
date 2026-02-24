@@ -686,12 +686,12 @@ export default function DocumentosPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none text-white">Categoria (Pasta)</label>
+                                <label className="text-sm font-medium leading-none text-white">Mover para outra Categoria (Pasta)</label>
                                 <Select value={editingDoc.category} onValueChange={(val) => setEditingDoc({ ...editingDoc, category: val, brand: "" })}>
                                     <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
                                         <SelectValue placeholder="Selecione uma Categoria" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                    <SelectContent className="bg-gray-800 border-gray-700 text-white z-[100]">
                                         {uniqueCategories.map((cat: any) => (
                                             <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                                         ))}
@@ -699,12 +699,12 @@ export default function DocumentosPage() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none text-white">Marca / Fabricante</label>
+                                <label className="text-sm font-medium leading-none text-white">Mover para outra Marca / Fabricante</label>
                                 <Select value={editingDoc.brand} onValueChange={(val) => setEditingDoc({ ...editingDoc, brand: val })}>
                                     <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
                                         <SelectValue placeholder="Selecione uma Marca" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                    <SelectContent className="bg-gray-800 border-gray-700 text-white z-[100]">
                                         {Array.from(new Set(documents.filter(d => d.realCategory === editingDoc.category && d.brand).map(d => d.brand))).map((brand: any) => (
                                             <SelectItem key={brand} value={brand}>{brand}</SelectItem>
                                         ))}
@@ -783,7 +783,7 @@ export default function DocumentosPage() {
                                     <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
                                         <SelectValue placeholder="Manter na mesma categoria" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                    <SelectContent className="bg-gray-800 border-gray-700 text-white z-[100]">
                                         {uniqueCategories.map((cat: any) => (
                                             <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                                         ))}
