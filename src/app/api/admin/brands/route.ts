@@ -38,11 +38,14 @@ export async function POST(request: Request) {
     }
 }
 
-// PATCH: Renomear uma Marca Inteira dentro de uma Categoria (Bulk Update)
+// PATCH: Renomear uma Marca Inteira e/ou Mover para outra Categoria (Bulk Update)
 export async function PATCH(request: Request) {
     try {
         const body = await request.json();
-        const { categoryName, oldBrand, newBrand, userEmail } = body;
+        const { categoryName, oldBrand, newBrand, targetCategory, userEmail } = body;
+
+        // Se o Frontend não enviou targetCategory (legado), mantém a original
+        const finalCategory = targetCategory || categoryName;
 
         if (userEmail !== 'velhasorveteira@gmail.com') {
             return NextResponse.json({ error: 'Acesso Negado.' }, { status: 403 });
@@ -71,11 +74,11 @@ export async function PATCH(request: Request) {
         const updates = docsToUpdate.map(doc => ({
             id: doc.id,
             brand: newBrand,
-            // Reconstrói a string mágica exata de Category|Brand para não perder os níveis
-            description: `Cat:${categoryName}|${newBrand}`
+            // Reconstrói a string mágica exata de Category|Brand usando a FINAL CATEGORY
+            description: `Cat:${finalCategory}|${newBrand}`
         }));
 
-        // 3. Atualizar UM POR UM (como fizemos em categorias) pois o Supabase REST não faz mass update elegante
+        // 3. Atualizar UM POR UM
         const errorList = [];
         for (const up of updates) {
             const { error: updError } = await supabaseAdmin

@@ -41,6 +41,7 @@ export default function DocumentosPage() {
     const [brandModalMode, setBrandModalMode] = useState<"create" | "edit">("create");
     const [currentBrandName, setCurrentBrandName] = useState("");
     const [newBrandName, setNewBrandName] = useState("");
+    const [brandTargetCategory, setBrandTargetCategory] = useState<string>("");
     const [isSavingBrand, setIsSavingBrand] = useState(false);
 
     useEffect(() => {
@@ -319,6 +320,7 @@ export default function DocumentosPage() {
     const handleCreateBrandClick = () => {
         setBrandModalMode("create");
         setNewBrandName("");
+        setBrandTargetCategory("");
         setBrandModalOpen(true);
     };
 
@@ -327,6 +329,7 @@ export default function DocumentosPage() {
         setBrandModalMode("edit");
         setCurrentBrandName(brName);
         setNewBrandName(brName);
+        setBrandTargetCategory("");
         setBrandModalOpen(true);
     };
 
@@ -348,27 +351,35 @@ export default function DocumentosPage() {
                     alert('Falha ao criar marca.');
                 }
             } else {
-                if (newBrandName.trim() === currentBrandName) {
+                if (newBrandName.trim() === currentBrandName && (!brandTargetCategory || brandTargetCategory === selectedCategory)) {
                     setBrandModalOpen(false);
                     return setIsSavingBrand(false);
                 }
                 const res = await fetch(`/api/admin/brands`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ categoryName: selectedCategory, oldBrand: currentBrandName, newBrand: newBrandName.trim(), userEmail: dbUser.email })
+                    body: JSON.stringify({ categoryName: selectedCategory, oldBrand: currentBrandName, newBrand: newBrandName.trim(), targetCategory: brandTargetCategory || selectedCategory, userEmail: dbUser.email })
                 });
                 if (res.ok) {
+                    const finalCategory = brandTargetCategory || selectedCategory;
                     setDocuments(docs => docs.map(d => {
                         if (d.realCategory === selectedCategory && d.brand === currentBrandName) {
                             return {
                                 ...d,
                                 brand: newBrandName.trim(),
-                                description: `Cat:${selectedCategory}|${newBrandName.trim()}`
+                                realCategory: finalCategory,
+                                description: `Cat:${finalCategory}|${newBrandName.trim()}`
                             };
                         }
                         return d;
                     }));
-                    if (selectedBrand === currentBrandName) setSelectedBrand(newBrandName.trim());
+                    if (selectedBrand === currentBrandName) {
+                        if (finalCategory !== selectedCategory) {
+                            setSelectedBrand(null);
+                        } else {
+                            setSelectedBrand(newBrandName.trim());
+                        }
+                    }
                     setBrandModalOpen(false);
                 } else {
                     alert("Falha ao renomear a marca em massa.");
@@ -675,20 +686,30 @@ export default function DocumentosPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none text-white">Marca / Fabricante</label>
-                                <Input
-                                    value={editingDoc.brand}
-                                    onChange={(e) => setEditingDoc({ ...editingDoc, brand: e.target.value })}
-                                    className="bg-gray-800 border-gray-700"
-                                />
+                                <label className="text-sm font-medium leading-none text-white">Categoria (Pasta)</label>
+                                <Select value={editingDoc.category} onValueChange={(val) => setEditingDoc({ ...editingDoc, category: val, brand: "" })}>
+                                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                                        <SelectValue placeholder="Selecione uma Categoria" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                        {uniqueCategories.map((cat: any) => (
+                                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none text-white">Categoria (Pasta)</label>
-                                <Input
-                                    value={editingDoc.category}
-                                    onChange={(e) => setEditingDoc({ ...editingDoc, category: e.target.value })}
-                                    className="bg-gray-800 border-gray-700"
-                                />
+                                <label className="text-sm font-medium leading-none text-white">Marca / Fabricante</label>
+                                <Select value={editingDoc.brand} onValueChange={(val) => setEditingDoc({ ...editingDoc, brand: val })}>
+                                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                                        <SelectValue placeholder="Selecione uma Marca" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                        {Array.from(new Set(documents.filter(d => d.realCategory === editingDoc.category && d.brand).map(d => d.brand))).map((brand: any) => (
+                                            <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
                     )}
@@ -755,6 +776,21 @@ export default function DocumentosPage() {
                                 autoFocus
                             />
                         </div>
+                        {brandModalMode === 'edit' && (
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium leading-none text-white">Mover para outra Categoria (Opcional)</label>
+                                <Select value={brandTargetCategory} onValueChange={setBrandTargetCategory}>
+                                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                                        <SelectValue placeholder="Manter na mesma categoria" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                        {uniqueCategories.map((cat: any) => (
+                                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button variant="ghost" onClick={() => setBrandModalOpen(false)}>Cancelar</Button>
