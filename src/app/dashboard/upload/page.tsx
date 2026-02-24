@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { UploadCloud, File, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import Link from "next/link";
 import { equipmentCategories } from "@/lib/equipmentData";
+import { supabase } from "@/lib/supabase";
 
 export default function UploadPage() {
     const { user, dbUser } = useAuth();
@@ -25,11 +26,56 @@ export default function UploadPage() {
     const [brand, setBrand] = useState("");
     const [customBrand, setCustomBrand] = useState("");
 
+    const [dynamicCategories, setDynamicCategories] = useState<Record<string, string[]>>(equipmentCategories);
+
     const [uploading, setUploading] = useState(false);
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+    // Fetch dynamic categories from the database on mount
+    useEffect(() => {
+        let isMounted = true;
+        const loadCategories = async () => {
+            const { data, error } = await supabase
+                .from("documents")
+                .select("description, brand")
+                .ilike("description", "Cat:%");
+
+            if (!error && data && isMounted) {
+                const mergedCategories: Record<string, string[]> = { ...equipmentCategories };
+
+                data.forEach(doc => {
+                    const match = doc.description?.match(/Cat:([^|]+)\|/);
+                    if (match) {
+                        const dbCategory = match[1].trim();
+                        const dbBrand = doc.brand?.trim();
+
+                        if (!mergedCategories[dbCategory]) {
+                            mergedCategories[dbCategory] = [];
+                        }
+
+                        if (dbBrand && dbBrand !== "Outros" && !mergedCategories[dbCategory].includes(dbBrand)) {
+                            mergedCategories[dbCategory].push(dbBrand);
+                        }
+                    }
+                });
+
+                // Ensure "Outros" is always present in every category
+                for (const cat in mergedCategories) {
+                    if (!mergedCategories[cat].includes("Outros")) {
+                        mergedCategories[cat].push("Outros");
+                    }
+                }
+
+                setDynamicCategories(mergedCategories);
+            }
+        };
+        loadCategories();
+
+        return () => { isMounted = false; };
+    }, []);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -55,7 +101,7 @@ export default function UploadPage() {
             let foundCategory = "";
             let foundBrand = "";
 
-            for (const [catName, brands] of Object.entries(equipmentCategories)) {
+            for (const [catName, brands] of Object.entries(dynamicCategories)) {
                 if (catName !== "Outros") {
                     // Try to find category match (e.g. "inversor", "ar condicionado")
                     const simpleCat = catName.split('/')[0].trim().toLowerCase();
@@ -90,39 +136,61 @@ export default function UploadPage() {
 
         try {
             const token = await user.getIdToken();
-            const formData = new FormData();
+
+            // 1. Upload directly to Supabase Storage (Client side)
+            const fileExt = file.name.split('.').pop();
+            const fileId = crypto.randomUUID();
+            const filePath = `${user.uid}/${fileId}.${fileExt}`;
+
+            const { data: uploadData, error: uploadError } = await supabase
+                .storage
+                .from('documents')
+                .upload(filePath, file, {
+                    cacheControl: '3600',
+                    upsert: false,
+                    // Note: supabase-js does not support progress callback for web upload directly in simple upload
+                    // but we can simulate progress for UX
+                });
+
+            if (uploadError) {
+                console.error("Storage upload error", uploadError);
+                throw new Error("Falha ao enviar arquivo para o storage. Verifique sua conexão ou permissões.");
+            }
+
+            setProgress(60);
+
+            const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(filePath);
 
             const finalCategory = category === "Outros" ? customCategory : category;
             const finalBrand = brand === "Outros" ? customBrand : brand;
 
-            formData.append("file", file);
-            formData.append("title", title);
-            formData.append("description", description);
-            formData.append("documentType", documentType);
-            formData.append("category", finalCategory);
-            formData.append("brand", finalBrand);
-            formData.append("uid", user.uid);
-
-            setProgress(40);
-
+            // 2. Send metadata to our API
             const response = await fetch("/api/documents/upload", {
                 method: "POST",
                 headers: {
+                    "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`
                 },
-                body: formData,
+                body: JSON.stringify({
+                    fileUrl: publicUrlData.publicUrl,
+                    fileName: file.name,
+                    fileSize: file.size,
+                    fileId: fileId,
+                    title,
+                    description,
+                    documentType,
+                    category: finalCategory,
+                    brand: finalBrand,
+                    uid: user.uid,
+                }),
             });
 
-            setProgress(80);
+            setProgress(90);
 
             const data = await response.json();
 
             if (!response.ok) {
-                if (data.code === 'LIMIT_REACHED') {
-                    setShowUpgradeModal(true);
-                    throw new Error(data.error);
-                }
-                throw new Error(data.error || "Ocorreu um erro no upload");
+                throw new Error(data.error || "Ocorreu um erro ao salvar os metadados");
             }
 
             setProgress(100);
@@ -136,6 +204,7 @@ export default function UploadPage() {
             setCustomCategory("");
 
         } catch (err: any) {
+            console.error("Submit Error:", err);
             setError(err.message || "Erro desconhecido ao enviar arquivo");
             setProgress(0);
         } finally {
@@ -213,7 +282,7 @@ export default function UploadPage() {
                                     <SelectValue placeholder="Ex: Ar Condicionado, Geladeira..." />
                                 </SelectTrigger>
                                 <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                                    {Object.keys(equipmentCategories).map((cat) => (
+                                    {Object.keys(dynamicCategories).map((cat) => (
                                         <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                                     ))}
                                 </SelectContent>
@@ -240,8 +309,8 @@ export default function UploadPage() {
                                     <SelectValue placeholder="Selecione a marca" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                                    {category && equipmentCategories[category] ? (
-                                        equipmentCategories[category].map((b) => (
+                                    {category && dynamicCategories[category] ? (
+                                        dynamicCategories[category].map((b) => (
                                             <SelectItem key={b} value={b}>{b}</SelectItem>
                                         ))
                                     ) : (
