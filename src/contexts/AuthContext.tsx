@@ -27,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // Obter o token e sincronizar com o backend para registrar no Supabase
                 try {
                     const token = await currentUser.getIdToken();
+                    console.log("[AuthContext] Sincronizando usuário...");
                     const response = await fetch('/api/auth/sync', {
                         method: 'POST',
                         headers: {
@@ -40,10 +41,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             avatar_url: currentUser.photoURL,
                         }),
                     });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error("[AuthContext] Erro na resposta da sincronização:", errorData);
+                        return;
+                    }
+
                     const { user: dbUserObj } = await response.json();
+                    console.log("[AuthContext] Usuário sincronizado com sucesso:", dbUserObj);
                     setDbUser(dbUserObj);
                 } catch (error) {
-                    console.error("Erro ao sincronizar usuário", error);
+                    console.error("[AuthContext] Erro fatal ao sincronizar usuário:", error);
                 }
             } else {
                 setDbUser(null);
