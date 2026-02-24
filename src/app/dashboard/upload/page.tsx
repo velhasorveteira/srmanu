@@ -46,6 +46,37 @@ export default function UploadPage() {
             }
             setError("");
             setFile(selectedFile);
+
+            // Auto-fill logic
+            let fileName = selectedFile.name.replace(/\.pdf$/i, "");
+            setTitle(fileName);
+
+            const lowerName = fileName.toLowerCase();
+            let foundCategory = "";
+            let foundBrand = "";
+
+            for (const [catName, brands] of Object.entries(equipmentCategories)) {
+                if (catName !== "Outros") {
+                    // Try to find category match (e.g. "inversor", "ar condicionado")
+                    const simpleCat = catName.split('/')[0].trim().toLowerCase();
+                    if (lowerName.includes(simpleCat)) {
+                        foundCategory = catName;
+                    }
+
+                    // Try to find brand match
+                    for (const b of brands) {
+                        if (b !== "Outros" && lowerName.includes(b.toLowerCase())) {
+                            foundCategory = catName; // Auto select category if brand is found
+                            foundBrand = b;
+                            break;
+                        }
+                    }
+                    if (foundBrand) break;
+                }
+            }
+
+            if (foundCategory) setCategory(foundCategory);
+            if (foundBrand) setBrand(foundBrand);
         }
     };
 
@@ -127,6 +158,31 @@ export default function UploadPage() {
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-300">Arquivo PDF *</label>
+                            <div className="border-2 border-dashed border-gray-700 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-800/50 hover:bg-gray-800 transition-colors">
+                                <input
+                                    type="file"
+                                    accept="application/pdf"
+                                    className="hidden"
+                                    id="file-upload"
+                                    onChange={handleFileChange}
+                                />
+                                <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
+                                    <UploadCloud className="w-10 h-10 text-indigo-400 mb-2" />
+                                    <span className="text-sm font-medium text-indigo-400 hover:text-indigo-300">Clique para selecionar</span>
+                                    <span className="text-xs text-gray-500 mt-1">Somente .pdf (Máx 50MB)</span>
+                                </label>
+                            </div>
+                            {file && (
+                                <div className="flex items-center space-x-2 text-sm text-gray-300 bg-gray-800 p-2 rounded mt-2 border border-gray-700">
+                                    <File className="w-4 h-4 text-emerald-400" />
+                                    <span className="truncate flex-1">{file.name}</span>
+                                    <span className="text-gray-500 text-xs">{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-300">Título *</label>
                             <Input
                                 required
@@ -145,20 +201,6 @@ export default function UploadPage() {
                                 placeholder="Breve descrição do conteúdo..."
                                 className="bg-gray-800 border-gray-700 text-white focus-visible:ring-indigo-500"
                             />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-300">Tipo de Documento *</label>
-                            <Select value={documentType} onValueChange={setDocumentType}>
-                                <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                                    <SelectValue placeholder="Selecione o tipo de arquivo" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                                    <SelectItem value="document">Documento Geral</SelectItem>
-                                    <SelectItem value="catalog">Catálogo</SelectItem>
-                                    <SelectItem value="manual">Manual Técnico</SelectItem>
-                                </SelectContent>
-                            </Select>
                         </div>
 
                         <div className="space-y-2">
@@ -222,30 +264,7 @@ export default function UploadPage() {
                             </div>
                         )}
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-300">Arquivo PDF *</label>
-                            <div className="border-2 border-dashed border-gray-700 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-800/50 hover:bg-gray-800 transition-colors">
-                                <input
-                                    type="file"
-                                    accept="application/pdf"
-                                    className="hidden"
-                                    id="file-upload"
-                                    onChange={handleFileChange}
-                                />
-                                <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
-                                    <UploadCloud className="w-10 h-10 text-indigo-400 mb-2" />
-                                    <span className="text-sm font-medium text-indigo-400 hover:text-indigo-300">Clique para selecionar</span>
-                                    <span className="text-xs text-gray-500 mt-1">Somente .pdf (Máx 50MB)</span>
-                                </label>
-                            </div>
-                            {file && (
-                                <div className="flex items-center space-x-2 text-sm text-gray-300 bg-gray-800 p-2 rounded mt-2 border border-gray-700">
-                                    <File className="w-4 h-4 text-emerald-400" />
-                                    <span className="truncate flex-1">{file.name}</span>
-                                    <span className="text-gray-500 text-xs">{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
-                                </div>
-                            )}
-                        </div>
+
 
                         {error && <p className="text-red-400 text-sm">{error}</p>}
 
