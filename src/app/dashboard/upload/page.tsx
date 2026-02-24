@@ -15,7 +15,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function UploadPage() {
     const { user, dbUser } = useAuth();
-    const [file, setFile] = useState<File | null>(null);
+    const [files, setFiles] = useState<File[]>([]);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [documentType, setDocumentType] = useState("document");
@@ -79,123 +79,143 @@ export default function UploadPage() {
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            const selectedFile = e.target.files[0];
-            if (selectedFile.type !== "application/pdf") {
-                setError("Por favor, selecione apenas arquivos PDF.");
-                setFile(null);
-                return;
+            const selectedFiles = Array.from(e.target.files);
+            const validFiles: File[] = [];
+            let lastError = "";
+
+            selectedFiles.forEach(selectedFile => {
+                if (selectedFile.type !== "application/pdf") {
+                    lastError = "Por favor, selecione apenas arquivos PDF.";
+                    return;
+                }
+                if (selectedFile.size > 50 * 1024 * 1024) {
+                    lastError = "Um ou mais arquivos excedem o limite de 50MB.";
+                    return;
+                }
+                validFiles.push(selectedFile);
+            });
+
+            if (lastError) {
+                setError(lastError);
+            } else {
+                setError("");
             }
-            if (selectedFile.size > 50 * 1024 * 1024) {
-                setError("O arquivo excede o limite de 50MB.");
-                setFile(null);
-                return;
-            }
-            setError("");
-            setFile(selectedFile);
 
-            // Auto-fill logic
-            let fileName = selectedFile.name.replace(/\.pdf$/i, "");
-            setTitle(fileName);
+            if (validFiles.length > 0) {
+                setFiles(prev => [...prev, ...validFiles]);
 
-            const lowerName = fileName.toLowerCase();
-            let foundCategory = "";
-            let foundBrand = "";
+                // Auto-fill logic based on the FIRST newly added valid file (if title is empty)
+                if (!title) {
+                    const firstFile = validFiles[0];
+                    let fileName = firstFile.name.replace(/\.pdf$/i, "");
+                    setTitle(fileName);
 
-            for (const [catName, brands] of Object.entries(dynamicCategories)) {
-                if (catName !== "Outros") {
-                    // Try to find category match (e.g. "inversor", "ar condicionado")
-                    const simpleCat = catName.split('/')[0].trim().toLowerCase();
-                    if (lowerName.includes(simpleCat)) {
-                        foundCategory = catName;
-                    }
+                    const lowerName = fileName.toLowerCase();
+                    let foundCategory = "";
+                    let foundBrand = "";
 
-                    // Try to find brand match
-                    for (const b of brands) {
-                        if (b !== "Outros" && lowerName.includes(b.toLowerCase())) {
-                            foundCategory = catName; // Auto select category if brand is found
-                            foundBrand = b;
-                            break;
+                    for (const [catName, brands] of Object.entries(dynamicCategories)) {
+                        if (catName !== "Outros") {
+                            const simpleCat = catName.split('/')[0].trim().toLowerCase();
+                            if (lowerName.includes(simpleCat)) {
+                                foundCategory = catName;
+                            }
+
+                            for (const b of brands) {
+                                if (b !== "Outros" && lowerName.includes(b.toLowerCase())) {
+                                    foundCategory = catName;
+                                    foundBrand = b;
+                                    break;
+                                }
+                            }
+                            if (foundBrand) break;
                         }
                     }
-                    if (foundBrand) break;
+
+                    if (foundCategory && !category) setCategory(foundCategory);
+                    if (foundBrand && !brand) setBrand(foundBrand);
                 }
             }
-
-            if (foundCategory) setCategory(foundCategory);
-            if (foundBrand) setBrand(foundBrand);
         }
+    };
+
+    const removeFile = (index: number) => {
+        setFiles(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!file || !user) return;
+        if (files.length === 0 || !user) return;
 
         setUploading(true);
-        setProgress(10);
+        setProgress(0);
         setError("");
 
         try {
             const token = await user.getIdToken();
+            const totalFiles = files.length;
+            let completedFiles = 0;
 
-            // 1. Upload directly to Supabase Storage (Client side)
-            const fileExt = file.name.split('.').pop();
-            const fileId = crypto.randomUUID();
-            const filePath = `${user.uid}/${fileId}.${fileExt}`;
+            for (const file of files) {
+                // 1. Upload directly to Supabase Storage (Client side)
+                const fileExt = file.name.split('.').pop();
+                const fileId = crypto.randomUUID();
+                const filePath = `${user.uid}/${fileId}.${fileExt}`;
 
-            const { data: uploadData, error: uploadError } = await supabase
-                .storage
-                .from('documents')
-                .upload(filePath, file, {
-                    cacheControl: '3600',
-                    upsert: false,
-                    // Note: supabase-js does not support progress callback for web upload directly in simple upload
-                    // but we can simulate progress for UX
+                const { data: uploadData, error: uploadError } = await supabase
+                    .storage
+                    .from('documents')
+                    .upload(filePath, file, {
+                        cacheControl: '3600',
+                        upsert: false,
+                    });
+
+                if (uploadError) {
+                    console.error("Storage upload error", uploadError);
+                    throw new Error(`Falha ao enviar arquivo ${file.name} para o storage.`);
+                }
+
+                const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(filePath);
+
+                const finalCategory = category === "Outros" ? customCategory : category;
+                const finalBrand = brand === "Outros" ? customBrand : brand;
+
+                // 2. Send metadata to our API
+                // For multiple files, if the title matches the original filename of the first file, 
+                // we'll use the individual file's name as the title for subsequent ones.
+                const currentTitle = completedFiles === 0 ? title : file.name.replace(/\.pdf$/i, "");
+
+                const response = await fetch("/api/documents/upload", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        fileUrl: publicUrlData.publicUrl,
+                        fileName: file.name,
+                        fileSize: file.size,
+                        fileId: fileId,
+                        title: currentTitle,
+                        description,
+                        documentType,
+                        category: finalCategory,
+                        brand: finalBrand,
+                        uid: user.uid,
+                    }),
                 });
 
-            if (uploadError) {
-                console.error("Storage upload error", uploadError);
-                throw new Error("Falha ao enviar arquivo para o storage. Verifique sua conexão ou permissões.");
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Erro ao salvar metadados do arquivo ${file.name}`);
+                }
+
+                completedFiles++;
+                setProgress(Math.round((completedFiles / totalFiles) * 100));
             }
 
-            setProgress(60);
-
-            const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(filePath);
-
-            const finalCategory = category === "Outros" ? customCategory : category;
-            const finalBrand = brand === "Outros" ? customBrand : brand;
-
-            // 2. Send metadata to our API
-            const response = await fetch("/api/documents/upload", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    fileUrl: publicUrlData.publicUrl,
-                    fileName: file.name,
-                    fileSize: file.size,
-                    fileId: fileId,
-                    title,
-                    description,
-                    documentType,
-                    category: finalCategory,
-                    brand: finalBrand,
-                    uid: user.uid,
-                }),
-            });
-
-            setProgress(90);
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || "Ocorreu um erro ao salvar os metadados");
-            }
-
-            setProgress(100);
             setSuccess(true);
-            setFile(null);
+            setFiles([]);
             setTitle("");
             setDescription("");
             setBrand("");
@@ -206,7 +226,7 @@ export default function UploadPage() {
         } catch (err: any) {
             console.error("Submit Error:", err);
             setError(err.message || "Erro desconhecido ao enviar arquivo");
-            setProgress(0);
+            // Note: In case of partial failure, we don't reset files list so user can try again
         } finally {
             setUploading(false);
         }
@@ -235,18 +255,30 @@ export default function UploadPage() {
                                     className="hidden"
                                     id="file-upload"
                                     onChange={handleFileChange}
+                                    multiple
                                 />
                                 <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
                                     <UploadCloud className="w-10 h-10 text-indigo-400 mb-2" />
-                                    <span className="text-sm font-medium text-indigo-400 hover:text-indigo-300">Clique para selecionar</span>
-                                    <span className="text-xs text-gray-500 mt-1">Somente .pdf (Máx 50MB)</span>
+                                    <span className="text-sm font-medium text-indigo-400 hover:text-indigo-300">Clique para selecionar arquivos</span>
+                                    <span className="text-xs text-gray-500 mt-1">Somente .pdf (Máx 50MB/cada)</span>
                                 </label>
                             </div>
-                            {file && (
-                                <div className="flex items-center space-x-2 text-sm text-gray-300 bg-gray-800 p-2 rounded mt-2 border border-gray-700">
-                                    <File className="w-4 h-4 text-emerald-400" />
-                                    <span className="truncate flex-1">{file.name}</span>
-                                    <span className="text-gray-500 text-xs">{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
+                            {files.length > 0 && (
+                                <div className="space-y-2 mt-4">
+                                    {files.map((f, index) => (
+                                        <div key={`${f.name}-${index}`} className="flex items-center space-x-2 text-sm text-gray-300 bg-gray-800 p-2 rounded border border-gray-700 group">
+                                            <File className="w-4 h-4 text-emerald-400 shrink-0" />
+                                            <span className="truncate flex-1">{f.name}</span>
+                                            <span className="text-gray-500 text-xs shrink-0">{(f.size / (1024 * 1024)).toFixed(2)} MB</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeFile(index)}
+                                                className="text-gray-500 hover:text-red-400 transition-colors p-1"
+                                            >
+                                                <AlertCircle className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
