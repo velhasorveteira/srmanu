@@ -393,7 +393,7 @@ export default function UploadPage() {
                         <Button
                             type="submit"
                             disabled={
-                                !file ||
+                                files.length === 0 ||
                                 !title ||
                                 !category ||
                                 (category === "Outros" && !customCategory) ||
