@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { UpgradeModal } from "@/components/UpgradeModal";
 import Link from "next/link";
 import { equipmentCategories } from "@/lib/equipmentData";
 import { supabase } from "@/lib/supabase";
@@ -32,7 +31,6 @@ export default function UploadPage() {
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
-    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
     // Fetch dynamic categories from the database on mount
     useEffect(() => {
@@ -409,7 +407,6 @@ export default function UploadPage() {
                 </CardContent>
             </Card>
 
-            <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
         </div>
     );
 }

@@ -6,11 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { UserCircle, Crown, UploadCloud, Bot, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { UpgradeModal } from "@/components/UpgradeModal";
 
 export default function PerfilPage() {
     const { user, dbUser } = useAuth();
-    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [isRunningAI, setIsRunningAI] = useState(false);
     const [aiResult, setAiResult] = useState<any>(null);
 
@@ -50,29 +48,12 @@ export default function PerfilPage() {
                         <CardTitle className="text-2xl">{user?.displayName || "Usuário"}</CardTitle>
                         <CardDescription className="text-gray-400 text-sm">{user?.email}</CardDescription>
                         <div className="mt-2">
-                            {dbUser?.is_pro ? (
-                                <Badge className="bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 border-yellow-500/50">
-                                    <Crown className="w-3 h-3 mr-1" /> Assinante PRO ✨
-                                </Badge>
-                            ) : (
-                                <Badge variant="outline" className="border-gray-500 text-gray-300">
-                                    Plano Free
-                                </Badge>
-                            )}
+                            <Badge className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/50">
+                                <Crown className="w-3 h-3 mr-1" /> Acesso Liberado ✨
+                            </Badge>
                         </div>
                     </div>
                 </CardHeader>
-                {!dbUser?.is_pro && (
-                    <CardFooter>
-                        <Button
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20"
-                            onClick={() => setShowUpgradeModal(true)}
-                        >
-                            <UploadCloud className="w-4 h-4 mr-2" />
-                            Fazer Upgrade para Pro
-                        </Button>
-                    </CardFooter>
-                )}
             </Card>
 
             {/* PAINEL EXCLUSIVO DO ADMINISTRADOR */}
@@ -111,7 +92,6 @@ export default function PerfilPage() {
                 </Card>
             )}
 
-            <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
         </div>
     );
 }

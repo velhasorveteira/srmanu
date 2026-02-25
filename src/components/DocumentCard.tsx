@@ -113,9 +113,6 @@ export function DocumentCard({
                 <div className="flex items-center space-x-2 text-xs pt-1 border-t border-gray-800 mt-2">
                     <span className="text-gray-500">Enviado por:</span>
                     <span className="font-medium text-gray-300">{uploader_name || 'Usuário Anônimo'}</span>
-                    {is_pro_uploader && (
-                        <Badge variant="outline" className="border-yellow-600 text-yellow-500 px-1 py-0 text-[10px] h-4">PRO</Badge>
-                    )}
                 </div>
 
                 <div className="flex justify-between text-xs text-gray-500">

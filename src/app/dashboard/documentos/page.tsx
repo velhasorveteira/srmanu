@@ -8,7 +8,6 @@ import { supabase } from "@/lib/supabase";
 import { DocumentCard } from "@/components/DocumentCard";
 import { PdfViewerModal } from "@/components/PdfViewerModal";
 import { useAuth } from "@/contexts/AuthContext";
-import { UpgradeModal } from "@/components/UpgradeModal";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
@@ -21,7 +20,6 @@ export default function DocumentosPage() {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
     const [viewingPdfUrl, setViewingPdfUrl] = useState<string | null>(null);
-    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [activeTab, setActiveTab] = useState<"explore" | "favorites">("explore");
     const [favoriteIds, setFavoriteIds] = useState<Record<string, boolean>>({});
 
@@ -69,10 +67,6 @@ export default function DocumentosPage() {
 
     const handleToggleFavorite = async (docId: string) => {
         if (!dbUser?.id) return;
-        if (!dbUser?.is_pro) {
-            setShowUpgradeModal(true);
-            return;
-        }
 
         const isFav = favoriteIds[docId];
 
@@ -95,10 +89,6 @@ export default function DocumentosPage() {
     };
 
     const handleViewPdf = (url: string) => {
-        if (!dbUser?.is_pro) {
-            setShowUpgradeModal(true);
-            return;
-        }
         setViewingPdfUrl(url);
     };
 
@@ -132,10 +122,6 @@ export default function DocumentosPage() {
     };
 
     const handleDownload = async (id: string, url: string) => {
-        if (!dbUser?.is_pro) {
-            setShowUpgradeModal(true);
-            return;
-        }
         // Increment count
         try {
             await fetch(`/api/documents/${id}/download`, { method: "POST" });
@@ -483,10 +469,6 @@ export default function DocumentosPage() {
                 </button>
                 <button
                     onClick={() => {
-                        if (!dbUser?.is_pro) {
-                            setShowUpgradeModal(true);
-                            return;
-                        }
                         setActiveTab("favorites"); setSelectedCategory(null); setSelectedBrand(null);
                     }}
                     className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === "favorites" ? "bg-pink-600/20 text-pink-400" : "text-gray-400 hover:text-white"}`}
@@ -664,7 +646,6 @@ export default function DocumentosPage() {
             )}
 
             <PdfViewerModal url={viewingPdfUrl} onClose={() => setViewingPdfUrl(null)} />
-            <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
 
             {/* Admin Edit Modal */}
             <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>

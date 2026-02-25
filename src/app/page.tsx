@@ -25,7 +25,6 @@ export default function Home() {
           className="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-400 absolute left-1/2 -translate-x-1/2 z-10"
         >
           <Link href="#features" className="hover:text-indigo-400 transition-colors">Recursos</Link>
-          <Link href="#pricing" className="hover:text-indigo-400 transition-colors">Planos</Link>
         </motion.nav>
         <motion.div
           initial={{ opacity: 0, x: 20 }}
@@ -169,110 +168,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Pricing Section */}
-        <section id="pricing" className="container mx-auto px-6 py-28 relative">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1.5 }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-violet-600/10 rounded-full blur-[150px] pointer-events-none -z-10"
-          />
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-20"
-          >
-            <h2 className="text-4xl font-extrabold mb-4 tracking-tight">Assinaturas B2B</h2>
-            <p className="text-gray-400 text-lg">Pague pouco pelo acesso completo a toda a biblioteca de conhecimento do mercado.</p>
-          </motion.div>
-
-          <div className="grid lg:grid-cols-2 gap-8 max-w-5xl mx-auto items-center">
-            {/* Free Tier */}
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6 }}
-              className="bg-gray-900/40 rounded-3xl p-10 border border-gray-800 backdrop-blur-sm lg:h-[90%] flex flex-col justify-between hover:border-gray-700 transition-colors"
-            >
-              <div>
-                <h3 className="text-3xl font-bold mb-3 tracking-tight">Visitante</h3>
-                <p className="text-gray-500 mb-8 font-medium">Acesso limitado ao visualizador online</p>
-                <div className="text-5xl font-extrabold mb-10 tracking-tight">
-                  R$ 0<span className="text-xl text-gray-500 font-medium">/mês</span>
-                </div>
-                <ul className="space-y-5 text-gray-400 mb-10">
-                  <li className="flex items-center">
-                    <ShieldCheck className="w-6 h-6 text-gray-600 mr-4 flex-shrink-0" />
-                    Ler via visualizador do site
-                  </li>
-                  <li className="flex items-center text-gray-600 opacity-60">
-                    <Download className="w-6 h-6 mr-4 flex-shrink-0" />
-                    <span className="line-through">Downloads de Documentos</span>
-                  </li>
-                  <li className="flex items-center text-gray-600 opacity-60">
-                    <Star className="w-6 h-6 mr-4 flex-shrink-0" />
-                    <span className="line-through">Aba "Meus Favoritos"</span>
-                  </li>
-                </ul>
-              </div>
-              <Link href="/cadastro">
-                <Button className="w-full bg-gray-800/80 hover:bg-gray-700 text-white h-14 rounded-xl text-lg font-semibold transition-transform hover:scale-[1.02]">
-                  Cadastrar Grátis
-                </Button>
-              </Link>
-            </motion.div>
-
-            {/* Pro Tier (Destaque) */}
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6 }}
-              whileHover={{ scale: 1.02 }}
-              className="bg-gradient-to-br from-indigo-900/60 via-gray-900 to-gray-950 rounded-3xl p-10 border border-indigo-500/40 relative overflow-hidden shadow-2xl shadow-indigo-500/10 lg:scale-105 z-10 flex flex-col justify-between"
-            >
-              {/* Faixa Recomendado */}
-              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-400 to-violet-500"></div>
-              <div className="absolute top-0 right-8 bg-indigo-500 text-xs font-bold px-4 py-1.5 rounded-b-lg text-white tracking-widest uppercase shadow-md shadow-indigo-500/20">Mais Escolhido</div>
-
-              <div>
-                <h3 className="text-3xl font-bold mb-3 text-white tracking-tight">PRO</h3>
-                <p className="text-indigo-300 mb-8 font-medium">A ferramenta completa na palma da mão</p>
-                <div className="text-5xl font-extrabold mb-10 tracking-tight text-white flex items-end">
-                  R$ 49,90<span className="text-xl text-indigo-200/50 font-medium ml-2 pb-1">/mês</span>
-                </div>
-                <ul className="space-y-5 text-gray-200 mb-10 font-medium">
-                  <li className="flex items-center">
-                    <Search className="w-6 h-6 text-indigo-400 mr-4 flex-shrink-0" />
-                    Buscador Rápido Nível 3 (Marca/Cat)
-                  </li>
-                  <li className="flex items-center">
-                    <Download className="w-6 h-6 text-indigo-400 mr-4 flex-shrink-0" />
-                    Download Local de Todos Arquivos Ilimitado
-                  </li>
-                  <li className="flex items-center">
-                    <Star className="w-6 h-6 text-amber-500 mr-4 flex-shrink-0" />
-                    Aba Exclusiva de Favoritos
-                  </li>
-                  <li className="flex items-center">
-                    <Database className="w-6 h-6 text-indigo-400 mr-4 flex-shrink-0" />
-                    Upload Livre para o Repositório
-                  </li>
-                </ul>
-              </div>
-              <Link href="/cadastro">
-                <Button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white h-14 rounded-xl text-lg font-bold shadow-[0_0_20px_rgba(79,70,229,0.4)] transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)]">
-                  Assinar Acesso PRO
-                </Button>
-              </Link>
-            </motion.div>
-          </div>
-        </section>
       </main>
 
       <footer className="border-t border-gray-900 py-12 text-center text-gray-500 text-sm mt-12 bg-gray-950">
